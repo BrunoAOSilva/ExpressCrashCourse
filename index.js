@@ -1,107 +1,36 @@
-const http = require('http');
+const express = require('express');
 const path = require('path');
-const fs = require('fs');
+const exphbs = require('express-handlebars');
+const logger = require('./middleware/logger');
+const members = require('./Members');
 
-const server = http.createServer((req,res) => {
-    /* if(req.url === '/'){
-        fs.readFile(path.join(__dirname, 'public', 'index.html'), (err, content) => {
-            if(err) throw err;
-            res.writeHead(200,{'Content-Type': 'text/html'});
-            res.end(content);
-        });
-    } 
+const app = express();
 
-    if(req.url === '/about'){
-        fs.readFile(path.join(__dirname, 'public', 'about.html'), (err, content) => {
-            if(err) throw err;
-            res.writeHead(200,{'Content-Type': 'text/html'});
-            res.end(content);
-        });
-    } 
+// Init middleware
+// app.use(logger);
 
-    if(req.url === '/api/users'){
-        const users = [
-            {name: 'Bruno silva', age: 40},
-            {name: 'John Doe': age: 30}
-        ]
-        res.writeHead(200,{'Content-Type': 'application/json'});
-        res.end(JSON.stringify(users));
-     }*/
-    
-    // Build file path
-    let filePath = path.join(
-        __dirname,
-        'public',
-        req.url === '/' ? 'index.html' : req.url
-    );
+// Handlebars Middleware
+app.engine('handlebars', exphbs());
+app.set('view engine', 'handlebars');
 
-    // Extension of file
-    let extname = path.extname(filePath);
+// Body Parser Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
-    // Initial content type
-    let contentType = 'text/html';
+// Homepage Route
+app.get('/', (req, res) =>
+  res.render('index', {
+    title: 'Member App',
+    members
+  })
+);
 
-    // Check ext and set content type
-    switch(extname){
-        case '.js':
-            contentType = 'text/javascript';
-            break;
-        case '.css':
-            contentType = 'text/css';
-            break;
-        case '.json':
-            contentType = 'application/json';
-            break;
-        case '.png':
-            contentType = 'image/png';
-            break;
-        case '.jpg':
-            contentType = 'image/jpg';
-            break;
-    }
-    
-    fs.readFile(filePath, (err, content) => {
-        if(err){
-            if(err.code == 'ENOENT'){
-                // Page not found
-                fs.readFile(path.join(__dirname, 'public', '404.html'), (err, content) => {
-                    res.writeHead(200, {'Content-Type': 'text/html'});
-                    res.end(content, 'utf8');
-                });
-            } else{
-                // Some server error
-                res.writeHead(500);
-                res.end(`Server Error: ${err.code}`);
-            }
-        } else{
-            // Success
-            res.writeHead(200, {'Content-Type': contentType});
-            res.end(content, 'utf8');
-        }
-    });
+// Set static folder
+app.use(express.static(path.join(__dirname, 'public')));
 
-});
+// Members API Routes
+app.use('/api/members', require('./routes/api/members'));
 
 const PORT = process.env.PORT || 5000;
 
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
-
-// module exports
-/* const Person = require('./person');
-
-const person1 = new Person('Bruno', 33);
-
-person1.greeting(); */
-
-
-
-// event emmiter test
-/* const Logger = require('./logger');
-
-const logger = new Logger();
-
-logger.on('message', data => console.log('Called Listener', data));
-
-logger.log('Helloo World');
-logger.log('Hi'); */
+app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
